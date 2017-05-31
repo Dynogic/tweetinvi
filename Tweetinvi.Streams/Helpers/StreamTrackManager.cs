@@ -109,7 +109,6 @@ namespace Tweetinvi.Streams.Helpers
         // private string[] _uniqueKeywordsArray;
         private HashSet<string> _uniqueKeywordsHashSet;
         private string[][] _tracksKeywordsArray;
-        private Regex _matchingRegex;
 
         /// <summary>
         /// Creates Arrays of string that cache information for later comparisons
@@ -125,25 +124,6 @@ namespace Tweetinvi.Streams.Helpers
             {
                 _uniqueKeywordsHashSet.UnionWith(_tracksKeywordsArray[i]);
             }
-
-            var tracksContainsAtSymbol = _uniqueKeywordsHashSet.Any(x => x.StartsWith("@"));
-            var tracksContainsDollarTag = _uniqueKeywordsHashSet.Any(x => x.StartsWith("$"));
-
-            var regexBuilder = new StringBuilder(@"[\#");
-            
-            if (tracksContainsAtSymbol)
-            {
-                regexBuilder.Append("@");
-            }
-
-            if (tracksContainsDollarTag)
-            {
-                regexBuilder.Append(@"\$");
-            }
-
-            regexBuilder.Append(@"]\w+|\w+");
-
-            _matchingRegex = new Regex(regexBuilder.ToString(), RegexOptions.IgnoreCase);
         }
 
         public bool Matches(string input)
@@ -265,20 +245,16 @@ namespace Tweetinvi.Streams.Helpers
 
         private string[] GetMatchingKeywords(string input)
         {
-            return _matchingRegex
-                .Matches(input.ToLower())
-                .OfType<Match>()
-                .Where(match =>
+            var list = new List<string>();
+            var inputLowered = input.ToLower();
+            foreach (var uniqueKeyword in _uniqueKeywordsHashSet)
+            {
+                if (inputLowered.IndexOf(uniqueKeyword.ToLower()) > -1)
                 {
-                    if (match.Value[0] == '#' || match.Value[0] == '$')
-                    {
-                        return _uniqueKeywordsHashSet.Contains(match.Value) ||
-                               _uniqueKeywordsHashSet.Contains(match.Value.Substring(1, match.Value.Length - 1));
-                    }
-
-                    return _uniqueKeywordsHashSet.Contains(match.Value);
-                })
-                .Select(x => x.Value).ToArray();
+                    list.Add(uniqueKeyword);
+                }
+            }
+            return list.ToArray();
         }
         
         public List<Tuple<string, Action<T>>> GetMatchingTracksAndActions(string input)
